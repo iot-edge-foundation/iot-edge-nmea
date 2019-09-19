@@ -1,20 +1,22 @@
 namespace NmeaModule
 {
     using System;
-    using System.IO;
-    using System.Runtime.InteropServices;
     using System.Runtime.Loader;
-    using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Client;
     using Microsoft.Azure.Devices.Client.Transport.Mqtt;
     using svelde.nmea.parser;
+    using Newtonsoft.Json;
+
+// TODO : one parser per port
 
     class Program
     {
         static NmeaParser _parser;
+
+        static ModuleClient _ioTHubModuleClient;
 
         static void Main(string[] args)
         {
@@ -47,26 +49,48 @@ namespace NmeaModule
             ITransportSettings[] settings = { mqttSetting };
 
             // Open a connection to the Edge runtime
-            ModuleClient ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
-            await ioTHubModuleClient.OpenAsync();
+            _ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
+            await _ioTHubModuleClient.OpenAsync();
             Console.WriteLine("IoT Hub module client initialized.");
 
             _parser = new NmeaParser();
 
-            _parser.NmeaMessageParsed += null;
+            _parser.NmeaMessageParsed += NmeaMessageParsed;
 
             // Register callback to be called when a message is received by the module
-            await ioTHubModuleClient.SetInputMessageHandlerAsync("input1", PipeMessage, ioTHubModuleClient);
+            await _ioTHubModuleClient.SetInputMessageHandlerAsync("input1", PipeMessage, _ioTHubModuleClient);
         }
-
-        static void NmeaMessageParsed(NmeaMessage e)
+        static async void NmeaMessageParsed(object sender, NmeaMessage e)
         {
             Console.WriteLine($"{e}");
             
-            if (e is GnrmcMessage)
+            if (!(e is GnrmcMessage) 
+                       || !(e as GnrmcMessage).ModeIndicator.IsValid())
             {
-            // Use message
-            }   
+                Console.WriteLine($"*** Invalid fix '{(e as GngllMessage).ModeIndicator}'; no location sent");
+                return;
+            }
+
+            var telemetry = new Telemetry
+            {
+                Location = new TelemetryLocation
+                {
+                    Latitude = (e as GnrmcMessage).Latitude.ToDecimalDegrees(),
+                    Longitude = (e as GnrmcMessage).Longitude.ToDecimalDegrees(),
+                },
+                FixTaken = (e as GnrmcMessage).TimeOfFix,
+                ModeIndicator = (e as GnrmcMessage).ModeIndicator,
+                Port = e.Port,
+                TimestampUtc = e.TimestampUtc,
+            };
+
+            var json = JsonConvert.SerializeObject(telemetry);
+
+            using (var message = new Message(Encoding.ASCII.GetBytes(json)))
+            {
+                await _ioTHubModuleClient.SendEventAsync(e.Port, message);
+                Console.WriteLine($"Received message sent to port '{e.Port}'");
+            }
         }
 
         /// <summary>
@@ -76,29 +100,57 @@ namespace NmeaModule
         /// </summary>
         static async Task<MessageResponse> PipeMessage(Message message, object userContext)
         {
-            var moduleClient = userContext as ModuleClient;
-            if (moduleClient == null)
-            {
-                throw new InvalidOperationException("UserContext doesn't contain " + "expected values");
-            }
-
             byte[] messageBytes = message.GetBytes();
             string messageString = Encoding.UTF8.GetString(messageBytes);
-            //Console.WriteLine($"Received message: {counterValue}, Body: [{messageString}]");
+            
+            Console.WriteLine($"Body: [{messageString}]");
 
-            if (!string.IsNullOrEmpty(messageString))
-            {
-                using (var pipeMessage = new Message(messageBytes))
-                {
-                    foreach (var prop in message.Properties)
-                    {
-                        pipeMessage.Properties.Add(prop.Key, prop.Value);
-                    }
-                    await moduleClient.SendEventAsync("output1", pipeMessage);
-                    Console.WriteLine("Received message sent");
-                }
-            }
-            return MessageResponse.Completed;
+            var serialMessage = JsonConvert.DeserializeObject<SerialMessage>(messageString);
+
+            _parser.Parse(serialMessage.Data, serialMessage.Port, serialMessage.TimestampUtc);
+
+            return await Task.FromResult<MessageResponse>(MessageResponse.Completed);
         }
+    }
+
+    public class Telemetry
+    {
+        [JsonProperty("timestampUtc")]
+        public DateTime TimestampUtc { get; set; }
+
+        [JsonProperty(PropertyName = "location")]
+        public TelemetryLocation Location { get; set; }
+
+        [JsonProperty(PropertyName = "modeIndicator")]
+        public ModeIndicator ModeIndicator { get; set; }
+
+        [JsonProperty("port")]
+        public string Port { get; set; }
+
+        [JsonProperty(PropertyName = "fixTaken")]
+        public string FixTaken { get; set; }
+    }
+    public class TelemetryLocation
+    {
+        [JsonProperty(PropertyName = "lat")]
+        public decimal Latitude { get; set; }
+
+        [JsonProperty(PropertyName = "lon")]
+        public decimal Longitude { get; set; }
+
+        [JsonProperty(PropertyName = "alt")]
+        public decimal? Altitude { get; set; }
+    }
+
+    public class SerialMessage
+    {
+        [JsonProperty("data")]
+        public string Data { get; set; }
+
+        [JsonProperty("port")]
+        public string Port { get; set; }
+
+        [JsonProperty("timestampUtc")]
+        public DateTime TimestampUtc { get; set; }
     }
 }

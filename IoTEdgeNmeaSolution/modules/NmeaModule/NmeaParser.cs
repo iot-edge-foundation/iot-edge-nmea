@@ -76,6 +76,11 @@ namespace svelde.nmea.parser
 
         public void Parse(string nmeaLine)
         {
+            this.Parse(nmeaLine, "nmea", DateTime.UtcNow);
+        }
+
+        public void Parse(string nmeaLine, string port, DateTime timestampUtc)
+        {
             try
             {
                 if (string.IsNullOrWhiteSpace(nmeaLine))
@@ -86,6 +91,9 @@ namespace svelde.nmea.parser
                 if (_parsers.ContainsKey(nmeaLine.Substring(0, 6)))
                 {
                     var p = _parsers.First(x => x.Key == nmeaLine.Substring(0, 6)).Value;
+
+                    p.Port = port;
+                    p.TimestampUtc = timestampUtc;
 
                     p.Parse(nmeaLine);
                 }

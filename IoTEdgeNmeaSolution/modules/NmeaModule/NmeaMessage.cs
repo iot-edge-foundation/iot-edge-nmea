@@ -7,6 +7,10 @@ namespace svelde.nmea.parser
     /// </summary>
     public abstract class NmeaMessage
     {
+        public string Port { get; set; }
+
+        public DateTime TimestampUtc { get; set; }
+
         public string MandatoryChecksum { get; set; }
 
         /// <summary>
