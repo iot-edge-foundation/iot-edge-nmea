@@ -57,40 +57,50 @@ namespace NmeaModule
 
             _parser.NmeaMessageParsed += NmeaMessageParsed;
 
+            Console.WriteLine("Parser initialized.");
+
             // Register callback to be called when a message is received by the module
             await _ioTHubModuleClient.SetInputMessageHandlerAsync("input1", PipeMessage, _ioTHubModuleClient);
+
+            Console.WriteLine("Input 'input1' attached.");
         }
         static async void NmeaMessageParsed(object sender, NmeaMessage e)
         {
-            Console.WriteLine($"{e}");
+            // if (!(e is GnrmcMessage) 
+            //            || !(e as GnrmcMessage).ModeIndicator.IsValid())
+            // {
+            //     Console.WriteLine($"Ignored: '{e}'");
+            //     return;
+            // }
+            // else
+            // {
+            //     Console.WriteLine($"Parsed: '{e}'");
+            // }
+
+            // var telemetry = new Telemetry
+            // {
+            //     Location = new TelemetryLocation
+            //     {
+            //         Latitude = (e as GnrmcMessage).Latitude.ToDecimalDegrees(),
+            //         Longitude = (e as GnrmcMessage).Longitude.ToDecimalDegrees(),
+            //     },
+            //     FixTaken = (e as GnrmcMessage).TimeOfFix,
+            //     Speed = Convert.ToDecimal( (e as GnrmcMessage).SpeedOverGround),
+            //     Course = Convert.ToDecimal( (e as GnrmcMessage).CourseMadeGood),
+            //     ModeIndicator = (e as GnrmcMessage).ModeIndicator,
+            //     Port = e.Port,
+            //     TimestampUtc = e.TimestampUtc,
+            // };
+
+            await Task.Run(()=> Console.WriteLine($"Parsed: '{e}'"));
             
-            if (!(e is GnrmcMessage) 
-                       || !(e as GnrmcMessage).ModeIndicator.IsValid())
-            {
-                Console.WriteLine($"*** Invalid fix '{(e as GngllMessage).ModeIndicator}'; no location sent");
-                return;
-            }
+            // var json = JsonConvert.SerializeObject(e);
 
-            var telemetry = new Telemetry
-            {
-                Location = new TelemetryLocation
-                {
-                    Latitude = (e as GnrmcMessage).Latitude.ToDecimalDegrees(),
-                    Longitude = (e as GnrmcMessage).Longitude.ToDecimalDegrees(),
-                },
-                FixTaken = (e as GnrmcMessage).TimeOfFix,
-                ModeIndicator = (e as GnrmcMessage).ModeIndicator,
-                Port = e.Port,
-                TimestampUtc = e.TimestampUtc,
-            };
-
-            var json = JsonConvert.SerializeObject(telemetry);
-
-            using (var message = new Message(Encoding.ASCII.GetBytes(json)))
-            {
-                await _ioTHubModuleClient.SendEventAsync(e.Port, message);
-                Console.WriteLine($"Received message sent to port '{e.Port}'");
-            }
+            // using (var message = new Message(Encoding.ASCII.GetBytes(json)))
+            // {
+            //     await _ioTHubModuleClient.SendEventAsync(e.Port, message);
+            //     Console.WriteLine($"Received message sent to port '{e.Port}'");
+            // }
         }
 
         /// <summary>
@@ -103,13 +113,15 @@ namespace NmeaModule
             byte[] messageBytes = message.GetBytes();
             string messageString = Encoding.UTF8.GetString(messageBytes);
             
-            Console.WriteLine($"Body: [{messageString}]");
+            Console.WriteLine($"Input Body: '{messageString}'");
 
             var serialMessage = JsonConvert.DeserializeObject<SerialMessage>(messageString);
 
-            _parser.Parse(serialMessage.Data, serialMessage.Port, serialMessage.TimestampUtc);
+//await Task.Run(()=> Console.WriteLine("TEST"));
 
-            return await Task.FromResult<MessageResponse>(MessageResponse.Completed);
+            await Task.Run(()=>_parser.Parse(serialMessage.Data, serialMessage.Port, serialMessage.TimestampUtc));
+
+            return MessageResponse.Completed;
         }
     }
 
@@ -123,6 +135,12 @@ namespace NmeaModule
 
         [JsonProperty(PropertyName = "modeIndicator")]
         public ModeIndicator ModeIndicator { get; set; }
+
+        [JsonProperty(PropertyName = "speed")]
+        public decimal Speed {get; set;}
+
+        [JsonProperty(PropertyName = "course")]
+        public decimal Course {get; set;}
 
         [JsonProperty("port")]
         public string Port { get; set; }

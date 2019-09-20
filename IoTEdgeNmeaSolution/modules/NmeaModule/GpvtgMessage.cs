@@ -4,9 +4,9 @@ namespace svelde.nmea.parser
 {
     public class GpvtgMessage : GnvtgMessage
     {
-        public override string GetIdentifier()
+        public GpvtgMessage()
         {
-            return "$GPVTG";
+            Type = "GPVTG";
         }
 
         public override void Parse(string nmeaLine)

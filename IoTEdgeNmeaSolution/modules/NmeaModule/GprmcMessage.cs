@@ -4,9 +4,9 @@ namespace svelde.nmea.parser
 {
     public class GprmcMessage : RmcMessage
     {
-        public override string GetIdentifier()
+        public GprmcMessage()
         {
-            return "$GPRMC";
+            Type = "GPRMC";
         }
 
         public override void Parse(string nmeaLine)

@@ -4,9 +4,9 @@ namespace svelde.nmea.parser
 {
     public class GpggaMessage : GnggaMessage
     {
-        public override string GetIdentifier()
+        public GpggaMessage()
         {
-            return "$GPGGA";
+            Type = "GPGGA";
         }
 
         public override void Parse(string nmeaLine)
