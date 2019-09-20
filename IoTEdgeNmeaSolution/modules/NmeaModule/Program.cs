@@ -11,6 +11,7 @@ namespace NmeaModule
     using Newtonsoft.Json;
 
 // TODO : one parser per port
+// TODO : filter in desired properties
 
     class Program
     {
@@ -39,10 +40,6 @@ namespace NmeaModule
             return tcs.Task;
         }
 
-        /// <summary>
-        /// Initializes the ModuleClient and sets up the callback to receive
-        /// messages containing temperature information
-        /// </summary>
         static async Task Init()
         {
             MqttTransportSettings mqttSetting = new MqttTransportSettings(TransportType.Mqtt_Tcp_Only);
@@ -50,13 +47,28 @@ namespace NmeaModule
 
             // Open a connection to the Edge runtime
             _ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
+
             await _ioTHubModuleClient.OpenAsync();
-            Console.WriteLine("IoT Hub module client initialized.");
 
-            _parser = new NmeaParser();
+            Console.WriteLine(@"");
+            Console.WriteLine(@"     /$$$$$$      /$$$$$$  /$$    /$$ /$$$$$$$$ /$$       /$$$$$$$  /$$$$$$$$ ");
+            Console.WriteLine(@"   /$$$__  $$$   /$$__  $$| $$   | $$| $$_____/| $$      | $$__  $$| $$_____/ ");
+            Console.WriteLine(@"  /$$_/  \_  $$ | $$  \__/| $$   | $$| $$      | $$      | $$  \ $$| $$       ");
+            Console.WriteLine(@" /$$/ /$$$$$  $$|  $$$$$$ |  $$ / $$/| $$$$$   | $$      | $$  | $$| $$$$$    ");
+            Console.WriteLine(@"| $$ /$$  $$| $$ \____  $$ \  $$ $$/ | $$__/   | $$      | $$  | $$| $$__/    ");
+            Console.WriteLine(@"| $$| $$\ $$| $$ /$$  \ $$  \  $$$/  | $$      | $$      | $$  | $$| $$       ");
+            Console.WriteLine(@"| $$|  $$$$$$$$/|  $$$$$$/   \  $/   | $$$$$$$$| $$$$$$$$| $$$$$$$/| $$$$$$$$ ");
+            Console.WriteLine(@"|  $$\________/  \______/     \_/    |________/|________/|_______/ |________/ ");
+            Console.WriteLine(@" \  $$$   /$$$                                                                ");
+            Console.WriteLine(@"  \_  $$$$$$_/                                                                ");
+            Console.WriteLine(@"    \______/                                                                  ");
+            Console.WriteLine("NMEA module client initialized.");
 
+            var filter = "GPGSV,GLGSV,GNGSV,GPGSA,GNGSA,GNGLL,GNRMC,GNVTG";
+            _parser = new NmeaParser(filter);
             _parser.NmeaMessageParsed += NmeaMessageParsed;
 
+            Console.WriteLine($"NMEA Filter on {filter}");
             Console.WriteLine("Parser initialized.");
 
             // Register callback to be called when a message is received by the module
@@ -64,100 +76,42 @@ namespace NmeaModule
 
             Console.WriteLine("Input 'input1' attached.");
         }
-        static async void NmeaMessageParsed(object sender, NmeaMessage e)
-        {
-            // if (!(e is GnrmcMessage) 
-            //            || !(e as GnrmcMessage).ModeIndicator.IsValid())
-            // {
-            //     Console.WriteLine($"Ignored: '{e}'");
-            //     return;
-            // }
-            // else
-            // {
-            //     Console.WriteLine($"Parsed: '{e}'");
-            // }
 
-            // var telemetry = new Telemetry
-            // {
-            //     Location = new TelemetryLocation
-            //     {
-            //         Latitude = (e as GnrmcMessage).Latitude.ToDecimalDegrees(),
-            //         Longitude = (e as GnrmcMessage).Longitude.ToDecimalDegrees(),
-            //     },
-            //     FixTaken = (e as GnrmcMessage).TimeOfFix,
-            //     Speed = Convert.ToDecimal( (e as GnrmcMessage).SpeedOverGround),
-            //     Course = Convert.ToDecimal( (e as GnrmcMessage).CourseMadeGood),
-            //     ModeIndicator = (e as GnrmcMessage).ModeIndicator,
-            //     Port = e.Port,
-            //     TimestampUtc = e.TimestampUtc,
-            // };
-
-            await Task.Run(()=> Console.WriteLine($"Parsed: '{e}'"));
-            
-            // var json = JsonConvert.SerializeObject(e);
-
-            // using (var message = new Message(Encoding.ASCII.GetBytes(json)))
-            // {
-            //     await _ioTHubModuleClient.SendEventAsync(e.Port, message);
-            //     Console.WriteLine($"Received message sent to port '{e.Port}'");
-            // }
-        }
-
-        /// <summary>
-        /// This method is called whenever the module is sent a message from the EdgeHub. 
-        /// It just pipe the messages without any change.
-        /// It prints all the incoming messages.
-        /// </summary>
         static async Task<MessageResponse> PipeMessage(Message message, object userContext)
         {
             byte[] messageBytes = message.GetBytes();
             string messageString = Encoding.UTF8.GetString(messageBytes);
             
-            Console.WriteLine($"Input Body: '{messageString}'");
+            //Console.WriteLine($"Input: '{messageString}'");
 
             var serialMessage = JsonConvert.DeserializeObject<SerialMessage>(messageString);
 
-//await Task.Run(()=> Console.WriteLine("TEST"));
-
-            await Task.Run(()=>_parser.Parse(serialMessage.Data, serialMessage.Port, serialMessage.TimestampUtc));
+            await Task.Run(() =>
+                {
+                    try
+                    {
+                        _parser.Parse(serialMessage.Data, serialMessage.Port, serialMessage.TimestampUtc);
+                    }
+                    catch(Exception ex)
+                    {
+                       Console.WriteLine($"Parse exception {ex.Message}");
+                    }
+                });
 
             return MessageResponse.Completed;
         }
-    }
 
-    public class Telemetry
-    {
-        [JsonProperty("timestampUtc")]
-        public DateTime TimestampUtc { get; set; }
+        static void NmeaMessageParsed(object sender, NmeaMessage e)
+        {
+            Console.WriteLine($"Parsed: '{e}'");
+            
+            var json = JsonConvert.SerializeObject(e);
 
-        [JsonProperty(PropertyName = "location")]
-        public TelemetryLocation Location { get; set; }
-
-        [JsonProperty(PropertyName = "modeIndicator")]
-        public ModeIndicator ModeIndicator { get; set; }
-
-        [JsonProperty(PropertyName = "speed")]
-        public decimal Speed {get; set;}
-
-        [JsonProperty(PropertyName = "course")]
-        public decimal Course {get; set;}
-
-        [JsonProperty("port")]
-        public string Port { get; set; }
-
-        [JsonProperty(PropertyName = "fixTaken")]
-        public string FixTaken { get; set; }
-    }
-    public class TelemetryLocation
-    {
-        [JsonProperty(PropertyName = "lat")]
-        public decimal Latitude { get; set; }
-
-        [JsonProperty(PropertyName = "lon")]
-        public decimal Longitude { get; set; }
-
-        [JsonProperty(PropertyName = "alt")]
-        public decimal? Altitude { get; set; }
+            using (var message = new Message(Encoding.UTF8.GetBytes(json)))
+            {
+                _ioTHubModuleClient.SendEventAsync(e.Port, message).Wait();
+            }
+        }
     }
 
     public class SerialMessage
