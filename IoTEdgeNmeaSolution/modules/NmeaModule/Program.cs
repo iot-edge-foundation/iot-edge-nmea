@@ -9,13 +9,15 @@ namespace NmeaModule
     using Microsoft.Azure.Devices.Client.Transport.Mqtt;
     using svelde.nmea.parser;
     using Newtonsoft.Json;
-
-// TODO : one parser per port
-// TODO : filter in desired properties
+    using Microsoft.Azure.Devices.Shared;
 
     class Program
     {
-        static NmeaParser _parser;
+        const string defaultFilter = "GPGSV,GLGSV,GNGSV,GPGSA,GNGSA,GNGLL,GNRMC,GNVTG";
+
+        static string _filter;
+
+        static NmeaParserList _parserList;
 
         static ModuleClient _ioTHubModuleClient;
 
@@ -42,11 +44,26 @@ namespace NmeaModule
 
         static async Task Init()
         {
+            _filter = defaultFilter;
+
+            _parserList = new NmeaParserList();
+            _parserList.UpdateFilter(_filter);
+            _parserList.NmeaMessagesParsed += NmeaMessageParsed;
+
+            Console.WriteLine("Parser initialized.");
+
             MqttTransportSettings mqttSetting = new MqttTransportSettings(TransportType.Mqtt_Tcp_Only);
             ITransportSettings[] settings = { mqttSetting };
 
             // Open a connection to the Edge runtime
             _ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
+
+            // Attach callback for Twin desired properties updates
+            await _ioTHubModuleClient.SetDesiredPropertyUpdateCallbackAsync(onDesiredPropertiesUpdate, _ioTHubModuleClient);
+
+            // Execute callback method for Twin desired properties updates
+            var twin = await _ioTHubModuleClient.GetTwinAsync();
+            await onDesiredPropertiesUpdate(twin.Properties.Desired, _ioTHubModuleClient);
 
             await _ioTHubModuleClient.OpenAsync();
 
@@ -64,13 +81,6 @@ namespace NmeaModule
             Console.WriteLine(@"    \______/                                                                  ");
             Console.WriteLine("NMEA module client initialized.");
 
-            var filter = "GPGSV,GLGSV,GNGSV,GPGSA,GNGSA,GNGLL,GNRMC,GNVTG";
-            _parser = new NmeaParser(filter);
-            _parser.NmeaMessageParsed += NmeaMessageParsed;
-
-            Console.WriteLine($"NMEA Filter on {filter}");
-            Console.WriteLine("Parser initialized.");
-
             // Register callback to be called when a message is received by the module
             await _ioTHubModuleClient.SetInputMessageHandlerAsync("input1", PipeMessage, _ioTHubModuleClient);
 
@@ -79,24 +89,34 @@ namespace NmeaModule
 
         static async Task<MessageResponse> PipeMessage(Message message, object userContext)
         {
-            byte[] messageBytes = message.GetBytes();
-            string messageString = Encoding.UTF8.GetString(messageBytes);
-            
-            //Console.WriteLine($"Input: '{messageString}'");
-
-            var serialMessage = JsonConvert.DeserializeObject<SerialMessage>(messageString);
-
-            await Task.Run(() =>
+            try
+            {
+                var moduleClient = userContext as ModuleClient;
+                if (moduleClient == null)
                 {
-                    try
-                    {
-                        _parser.Parse(serialMessage.Data, serialMessage.Port, serialMessage.TimestampUtc);
-                    }
-                    catch(Exception ex)
-                    {
-                       Console.WriteLine($"Parse exception {ex.Message}");
-                    }
-                });
+                    throw new InvalidOperationException("UserContext doesn't contain expected ModuleClient");
+                }
+
+                byte[] messageBytes = message.GetBytes();
+                string messageString = Encoding.UTF8.GetString(messageBytes);
+                
+                var serialMessage = JsonConvert.DeserializeObject<SerialMessage>(messageString);
+
+                var parser = _parserList.Find(serialMessage.Port);
+
+                parser.Parse(serialMessage.Data, serialMessage.Port, serialMessage.TimestampUtc);
+            }
+            catch (Exception ex)
+            {
+                var exceptionMessage = new ExceptionMessage{Message= ex.Message};
+
+                var json = JsonConvert.SerializeObject(exceptionMessage);
+
+                using (var messageException = new Message(Encoding.UTF8.GetBytes(json)))
+                {
+                    await _ioTHubModuleClient.SendEventAsync("Exception", messageException);
+                }
+            }
 
             return MessageResponse.Completed;
         }
@@ -112,6 +132,67 @@ namespace NmeaModule
                 _ioTHubModuleClient.SendEventAsync(e.Port, message).Wait();
             }
         }
+
+        private static Task onDesiredPropertiesUpdate(TwinCollection desiredProperties, object userContext)
+        {
+            if (desiredProperties.Count == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            try
+            {
+                Console.WriteLine("Desired property change:");
+                Console.WriteLine(JsonConvert.SerializeObject(desiredProperties));
+
+                var client = userContext as ModuleClient;
+
+                if (client == null)
+                {
+                    throw new InvalidOperationException($"UserContext doesn't contain expected ModuleClient");
+                }
+
+                var reportedProperties = new TwinCollection();
+
+                if (desiredProperties.Contains("filter")) 
+                {
+                    if (desiredProperties["filter"] != null)
+                    {
+                        _filter = desiredProperties["filter"];
+                    }
+                    else
+                    {
+                        _filter = defaultFilter;
+                    }
+
+                    Console.WriteLine($"Filter changed to {_filter}");
+
+                    reportedProperties["filter"] = _filter;
+
+                    _parserList.UpdateFilter(_filter);
+                }
+
+                if (reportedProperties.Count > 0)
+                {
+                    client.UpdateReportedPropertiesAsync(reportedProperties).ConfigureAwait(false);
+                }
+            }
+            catch (AggregateException ex)
+            {
+                foreach (Exception exception in ex.InnerExceptions)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Error when receiving desired property: {0}", exception);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Error when receiving desired property: {0}", ex.Message);
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     public class SerialMessage
@@ -124,5 +205,11 @@ namespace NmeaModule
 
         [JsonProperty("timestampUtc")]
         public DateTime TimestampUtc { get; set; }
+    }
+
+    public class ExceptionMessage
+    {
+        [JsonProperty("message")]
+        public string Message { get; set; }
     }
 }

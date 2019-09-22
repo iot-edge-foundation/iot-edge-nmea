@@ -15,6 +15,11 @@ namespace svelde.nmea.parser
 
         public NmeaParser(string filter)
         {
+            UpdateFilter(filter);
+        }
+
+        public void UpdateFilter(string filter)
+        {
             _parsers = new Dictionary<string, NmeaMessage>();
 
             var gngga = new GnggaMessage();
