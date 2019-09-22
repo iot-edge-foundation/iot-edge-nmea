@@ -136,6 +136,11 @@ namespace svelde.nmea.parser
                     throw new NmeaParseUnknownException();
                 }
 
+                if (nmeaLine.Length < 6)
+                {
+                    throw new Exception($"Incoming message '{nmeaLine}' is not nmea, Port {port} at {timestampUtc}, null)");
+                }
+
                 if (_parsers.ContainsKey(nmeaLine.Substring(0, 6)))
                 {
                     var p = _parsers.First(x => x.Key == nmeaLine.Substring(0, 6)).Value;
