@@ -89,6 +89,7 @@ namespace NmeaModule
 
         static async Task<MessageResponse> PipeMessage(Message message, object userContext)
         {
+            string messageString = string.Empty;
             try
             {
                 var moduleClient = userContext as ModuleClient;
@@ -98,9 +99,14 @@ namespace NmeaModule
                 }
 
                 byte[] messageBytes = message.GetBytes();
-                string messageString = Encoding.UTF8.GetString(messageBytes);
+                messageString = Encoding.UTF8.GetString(messageBytes);
                 
                 var serialMessage = JsonConvert.DeserializeObject<SerialMessage>(messageString);
+
+                if (serialMessage.Data.Length < 6)
+                {
+                    throw new Exception( $"Incoming message data is not nmea: Port {serialMessage.Port}: {serialMessage.Data} at {serialMessage.TimestampUtc}, null)");
+                }
 
                 await Task.Run(()=>{
                     var parser = _parserList.Find(serialMessage.Port);
