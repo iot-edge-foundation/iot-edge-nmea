@@ -105,7 +105,7 @@ namespace NmeaModule
 
                 if (serialMessage.Data.Length < 6)
                 {
-                    throw new Exception( $"Incoming message data is not nmea: Port {serialMessage.Port}: {serialMessage.Data} at {serialMessage.TimestampUtc}, null)");
+                    throw new Exception( $"Incoming message data is not nmea: Port {serialMessage.Port}: '{serialMessage.Data}' at {serialMessage.TimestampUtc}, null)");
                 }
 
                 await Task.Run(()=>{
