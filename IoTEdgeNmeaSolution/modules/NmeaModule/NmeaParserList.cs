@@ -20,6 +20,8 @@ namespace svelde.nmea.parser
 
             this.Add(port, nmeaParser);
 
+            Console.WriteLine($"Parser added for port '{port}'");
+
             return nmeaParser;
         }
 

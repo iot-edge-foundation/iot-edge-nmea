@@ -13,7 +13,7 @@ namespace NmeaModule
 
     class Program
     {
-        const string defaultFilter = "GPGSV,GLGSV,GNGSV,GPGSA,GNGSA,GNGLL,GNRMC,GNVTG";
+        const string defaultFilter = "";
 
         static string _filter;
 
@@ -102,9 +102,10 @@ namespace NmeaModule
                 
                 var serialMessage = JsonConvert.DeserializeObject<SerialMessage>(messageString);
 
-                var parser = _parserList.Find(serialMessage.Port);
-
-                parser.Parse(serialMessage.Data, serialMessage.Port, serialMessage.TimestampUtc);
+                await Task.Run(()=>{
+                    var parser = _parserList.Find(serialMessage.Port);
+                    parser.Parse(serialMessage.Data, serialMessage.Port, serialMessage.TimestampUtc);
+                });
             }
             catch (Exception ex)
             {
@@ -123,7 +124,7 @@ namespace NmeaModule
 
         static void NmeaMessageParsed(object sender, NmeaMessage e)
         {
-            Console.WriteLine($"Parsed: '{e}'");
+            Console.Write($"Parsed: '{e}'");
             
             var json = JsonConvert.SerializeObject(e);
 
@@ -131,6 +132,8 @@ namespace NmeaModule
             {
                 _ioTHubModuleClient.SendEventAsync(e.Port, message).Wait();
             }
+
+            Console.WriteLine($"-Sent");
         }
 
         private static Task onDesiredPropertiesUpdate(TwinCollection desiredProperties, object userContext)
@@ -165,7 +168,7 @@ namespace NmeaModule
                         _filter = defaultFilter;
                     }
 
-                    Console.WriteLine($"Filter changed to {_filter}");
+                    Console.WriteLine($"Filter changed to '{_filter}'");
 
                     reportedProperties["filter"] = _filter;
 
