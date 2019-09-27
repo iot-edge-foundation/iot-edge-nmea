@@ -133,7 +133,7 @@ Provide this 'filter' desired property to limit all parsers:
 
 ## Contribute
 
-This logic is licenced under the MIT license.
+The code of this logic is [open source](https://github.com/sandervandevelde/iot-edge-nmea) and licenced under the MIT license.
 
 Want to contribute? Throw me a pull request....
 
