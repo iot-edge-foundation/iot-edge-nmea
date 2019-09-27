@@ -198,22 +198,4 @@ namespace NmeaModule
             return Task.CompletedTask;
         }
     }
-
-    public class SerialMessage
-    {
-        [JsonProperty("data")]
-        public string Data { get; set; }
-
-        [JsonProperty("port")]
-        public string Port { get; set; }
-
-        [JsonProperty("timestampUtc")]
-        public DateTime TimestampUtc { get; set; }
-    }
-
-    public class ExceptionMessage
-    {
-        [JsonProperty("message")]
-        public string Message { get; set; }
-    }
 }
