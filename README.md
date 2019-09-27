@@ -8,6 +8,7 @@ This module parses incoming NMEA messages like GSV, GGA, GSA, GLL, GMC, VTG and 
 
 Messages from multiple ports are *not* combined but splitted in multiple outputs.
 
+## Docker Hub
 
 This module is available in [Docker Hub](https://cloud.docker.com/repository/docker/svelde/iot-edge-nmea).
 
@@ -130,4 +131,10 @@ Provide this 'filter' desired property to limit all parsers:
 }
 ```
 
+## Contribute
 
+This logic is licenced under the MIT license.
+
+Want to contribute? Throw me a pull request....
+
+Want to know more about me? Check out [my blog](https://blog.vandevelde-online.com)
