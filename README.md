@@ -46,6 +46,50 @@ So the parsed version of a NMEA message coming from 'ttyS0' will be available on
 
 The Output format is depending on the specific parsed message. See [the supported NMEA parser classes](https://github.com/sandervandevelde/nmeaparser/tree/master/src/svelde.nmea.parser) for the specific messages.  
 
+An example is:
+
+```
+public abstract class GsaMessage : NmeaMessage
+{
+    [JsonProperty(PropertyName = "autoSelection")]
+    public string AutoSelection{ get; private set; }
+
+    [JsonProperty(PropertyName = "fix3D")]
+    public string Fix3D { get; private set; }
+
+    [JsonProperty(PropertyName = "percentDop")]
+    public decimal PercentDop { get; private set; }
+
+    [JsonProperty(PropertyName = "horizontalDop")]
+    public decimal HorizontalDop { get; private set; }
+
+    [JsonProperty(PropertyName = "verticalDop")]
+    public decimal VerticalDop { get; private set; }
+
+    [JsonProperty(PropertyName = "prnsOfSatellitesUsedForFix")]
+    public List<int> PrnsOfSatellitesUsedForFix { get; private set; }
+}
+```
+
+The NmeaMessage looks like this:
+
+```
+public abstract class NmeaMessage
+{
+    [JsonProperty(PropertyName = "type")]
+    public string Type {get; set;}
+
+    [JsonProperty(PropertyName = "port")]
+    public string Port { get; set; }
+
+    [JsonProperty(PropertyName = "timestampUtc")]
+    public DateTime TimestampUtc { get; set; }
+
+    [JsonProperty(PropertyName = "mandatoryChecksum")]
+    public string MandatoryChecksum { get; set; }
+}
+```
+
 ### Exceptional output
 
 In case a message can not be parsed or another excpetion occurs, a message will be put on output 'Exception'.
@@ -62,7 +106,7 @@ public class ExceptionMessage
 
 ## Routes
 
-
+Here is an example of how to use routes: 
 
 {
   "routes": {
