@@ -137,4 +137,4 @@ The code of this logic is [open source](https://github.com/sandervandevelde/iot-
 
 Want to contribute? Throw me a pull request....
 
-Want to know more about me? Check out [my blog](https://blog.vandevelde-online.com)
+Want to know more about me? Check out [my blog](https://blog.vandevelde-online.com).
