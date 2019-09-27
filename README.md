@@ -1,6 +1,6 @@
 # iot-edge-nmea
 
-This Azure IoT Edge module parses NMEA message from multiple ports and outputs them as events. This module is an IoT Edge implementation of this [nmea library](https://github.com/sandervandevelde/nmeaparser). 
+This Azure IoT Edge module parses NMEA messages from multiple ports and outputs them as events. This module is an IoT Edge implementation of this [nmea library](https://github.com/sandervandevelde/nmeaparser). 
 
 ## Introduction
 
