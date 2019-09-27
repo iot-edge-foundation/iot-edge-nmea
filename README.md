@@ -108,6 +108,7 @@ public class ExceptionMessage
 
 Here is an example of how to use routes: 
 
+```
 {
   "routes": {
     "serialToNmea": "FROM /messages/modules/serial/outputs/ttyACM0 INTO BrokeredEndpoint(\"/modules/nmea/inputs/input1\")",
@@ -115,3 +116,18 @@ Here is an example of how to use routes:
     "route": "FROM /messages/modules/nmea/outputs/ttyACM0 INTO $upstream"
   }
 }
+```
+
+## Desired properties
+
+The parser can be limited in the types of messages to be parsed.
+
+Provide this 'filter' desired property to limit all parsers:
+
+```
+"desired": {
+  "filter": "GPGSV,GLGSV,GNGSV,GPGSA,GNGSA,GNGLL,GNRMC,GNVTG,"
+}
+```
+
+
