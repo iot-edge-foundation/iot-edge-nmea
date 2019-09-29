@@ -131,6 +131,16 @@ Provide this 'filter' desired property to limit all parsers:
 }
 ```
 
+## Tested devices
+
+The following devices are used to test the parser:
+
+* BEITIAN USB GNSS GPS Receiver BN-85U (U-Blox UBX-M8030)
+* Webio GRB-288 Bluetooth GPS mouse 
+* GSpace GS-R238 GPS mouse (SiRFstarIII)
+
+*Note: If you want to have your GPS device tested and officially supported here, please send me a DM on github or twitter @svelde*
+
 ## Contribute
 
 The code of this logic is [open source](https://github.com/sandervandevelde/iot-edge-nmea) and licenced under the MIT license.
