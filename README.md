@@ -119,6 +119,8 @@ Here is an example of how to use routes:
 }
 ```
 
+![routeToIoTHub](/media/EdgeRouteFlow.png)
+
 ## Desired properties
 
 The parser can be limited in the types of messages to be parsed.
@@ -140,6 +142,11 @@ The following devices are used to test the parser:
 * GSpace GS-R238 GPS mouse (SiRFstarIII)
 
 *Note: If you want to have your GPS device tested and officially supported here, please send me a DM on github or twitter @svelde*
+
+## Acknowledgement
+
+The routing image is produced with the [IoT Edge Module Flow generator](https://iotedgemoduleflow.azurewebsites.net/).
+
 
 ## Contribute
 
