@@ -147,7 +147,6 @@ The following devices are used to test the parser:
 
 The routing image is produced with the [IoT Edge Module Flow generator](https://iotedgemoduleflow.azurewebsites.net/).
 
-
 ## Contribute
 
 The code of this logic is [open source](https://github.com/sandervandevelde/iot-edge-nmea) and licenced under the MIT license.
