@@ -91,6 +91,8 @@ public abstract class NmeaMessage
 }
 ```
 
+This message contains a user-defined property "content-type" with value "application/edge-nmea-json".
+
 ### Exceptional output
 
 In case a message can not be parsed or another excpetion occurs, a message will be put on output 'Exception'.
@@ -104,6 +106,8 @@ public class ExceptionMessage
     public string Message { get; set; }
 }
 ```
+
+This message contains a user-defined property "content-type" with value "application/edge-nmea-exception".
 
 ## Routes
 
