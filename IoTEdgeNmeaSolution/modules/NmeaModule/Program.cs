@@ -115,6 +115,9 @@ namespace NmeaModule
 
                 using (var messageException = new Message(Encoding.UTF8.GetBytes(json)))
                 {
+                    messageException.ContentType = "application/json";
+                    messageException.ContentEncoding = "utf-8";
+                    
                     messageException.Properties.Add("content-type", "application/edge-nmea-exception");
 
                     await _ioTHubModuleClient.SendEventAsync("Exception", messageException);
@@ -132,6 +135,9 @@ namespace NmeaModule
 
             using (var message = new Message(Encoding.UTF8.GetBytes(json)))
             {
+                message.ContentType = "application/json";
+                message.ContentEncoding = "utf-8";
+                
                 message.Properties.Add("content-type", "application/edge-nmea-json");
 
                 _ioTHubModuleClient.SendEventAsync(e.Port, message).Wait();
